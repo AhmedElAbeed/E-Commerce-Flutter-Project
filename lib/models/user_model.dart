@@ -1,19 +1,17 @@
 class UserModel {
-  final String uid;
-  final String email;
-  final String role;
+  String? uid;
+  String? email;
+  String? name;
+  String? role; // <-- NEW field
 
-  UserModel({
-    required this.uid,
-    required this.email,
-    required this.role,
-  });
+  UserModel({this.uid, this.email, this.name, this.role});
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
-      uid: map['uid'] ?? '',
-      email: map['email'] ?? '',
-      role: map['role'] ?? 'client',
+      uid: map['uid'],
+      email: map['email'],
+      name: map['name'],
+      role: map['role'],
     );
   }
 
@@ -21,7 +19,8 @@ class UserModel {
     return {
       'uid': uid,
       'email': email,
-      'role': role,
+      'name': name,
+      'role': role ?? 'user', // default role
     };
   }
 }
