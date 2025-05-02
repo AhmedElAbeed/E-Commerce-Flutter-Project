@@ -3,21 +3,23 @@ import '../models/product_model.dart';
 import '../services/db_service.dart';
 
 class ProductProvider with ChangeNotifier {
-  final DBService _dbService;
+  final DBService dbService;
   List<ProductModel> _products = [];
   bool _isLoading = false;
 
-  ProductProvider(this._dbService);
+  ProductProvider(this.dbService);
 
   List<ProductModel> get products => _products;
   bool get isLoading => _isLoading;
 
   Future<void> loadProducts() async {
+    if (_isLoading) return;
+
     _isLoading = true;
     notifyListeners();
 
     try {
-      _products = await _dbService.getProducts();
+      _products = await dbService.getProducts();
     } catch (e) {
       debugPrint('Error loading products: $e');
       _products = [];
@@ -29,7 +31,7 @@ class ProductProvider with ChangeNotifier {
 
   Future<void> addProduct(ProductModel product) async {
     try {
-      await _dbService.insertProduct(product);
+      await dbService.insertProduct(product);
       await loadProducts();
     } catch (e) {
       debugPrint('Error adding product: $e');
@@ -39,7 +41,7 @@ class ProductProvider with ChangeNotifier {
 
   Future<void> updateProduct(ProductModel product) async {
     try {
-      await _dbService.updateProduct(product);
+      await dbService.updateProduct(product);
       await loadProducts();
     } catch (e) {
       debugPrint('Error updating product: $e');
@@ -47,9 +49,21 @@ class ProductProvider with ChangeNotifier {
     }
   }
 
+  Future<void> toggleFavorite(int productId) async {
+    try {
+      final product = _products.firstWhere((p) => p.id == productId);
+      product.isFavorite = !product.isFavorite;
+      await dbService.updateProduct(product);
+      await loadProducts();
+    } catch (e) {
+      debugPrint('Error toggling favorite: $e');
+      rethrow;
+    }
+  }
+
   Future<void> deleteProduct(int id) async {
     try {
-      await _dbService.deleteProduct(id);
+      await dbService.deleteProduct(id);
       await loadProducts();
     } catch (e) {
       debugPrint('Error deleting product: $e');
@@ -57,8 +71,8 @@ class ProductProvider with ChangeNotifier {
     }
   }
 
-  Future<void> clearDatabase() async {
-    await _dbService.clearDatabase();
+  Future<void> clearProducts() async {
+    await dbService.clearProducts();
     await loadProducts();
   }
 }

@@ -1,28 +1,25 @@
-class CartModel {
+class WishlistModel {
   final int? id;
   final int productId;
   final String title;
   final double price;
   final String image;
-  int quantity;
 
-  CartModel({
+  WishlistModel({
     this.id,
     required this.productId,
     required this.title,
     required this.price,
     required this.image,
-    required this.quantity,
   });
 
-  factory CartModel.fromMap(Map<String, dynamic> map) {
-    return CartModel(
+  factory WishlistModel.fromMap(Map<String, dynamic> map) {
+    return WishlistModel(
       id: map['id'],
       productId: map['productId'],
       title: map['title'],
       price: map['price'],
       image: map['image'],
-      quantity: map['quantity'],
     );
   }
 
@@ -33,7 +30,6 @@ class CartModel {
       'title': title,
       'price': price,
       'image': image,
-      'quantity': quantity,
     };
   }
 }

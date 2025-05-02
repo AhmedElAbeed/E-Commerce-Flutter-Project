@@ -1,19 +1,13 @@
 import 'dart:io';
-import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/product_model.dart';
 
 class DBService {
   static Database? _db;
   static const String _dbName = 'ecommerce.db';
-  static const int _dbVersion = 2;
-
-  final Database database;
-
-  DBService(this.database) {
-    _db = database;
-  }
+  static const int _dbVersion = 3;
 
   Future<Database> get db async {
     if (_db != null) return _db!;
@@ -34,21 +28,38 @@ class DBService {
   }
 
   Future _onCreate(Database db, int version) async {
+    await _createProductsTable(db);
+  }
+
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await _addColumnIfNotExists(db, 'products', 'stock', 'INTEGER DEFAULT 0');
+    }
+    if (oldVersion < 3) {
+      await _addColumnIfNotExists(db, 'products', 'isFavorite', 'INTEGER DEFAULT 0');
+    }
+  }
+
+  Future<void> _createProductsTable(Database db) async {
     await db.execute('''
-      CREATE TABLE products (
+      CREATE TABLE IF NOT EXISTS products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
         description TEXT,
         price REAL,
         image TEXT,
-        stock INTEGER
+        stock INTEGER DEFAULT 0,
+        isFavorite INTEGER DEFAULT 0
       )
     ''');
   }
 
-  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await db.execute('ALTER TABLE products ADD COLUMN stock INTEGER DEFAULT 0');
+  Future<void> _addColumnIfNotExists(Database db, String table, String column, String definition) async {
+    final columns = await db.rawQuery('PRAGMA table_info($table)');
+    final columnExists = columns.any((c) => c['name'] == column);
+
+    if (!columnExists) {
+      await db.execute('ALTER TABLE $table ADD COLUMN $column $definition');
     }
   }
 
@@ -82,7 +93,17 @@ class DBService {
     );
   }
 
-  Future<void> clearDatabase() async {
+  Future<ProductModel?> getProductById(int id) async {
+    final dbClient = await db;
+    final res = await dbClient.query(
+      'products',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return res.isNotEmpty ? ProductModel.fromMap(res.first) : null;
+  }
+
+  Future<void> clearProducts() async {
     final dbClient = await db;
     await dbClient.delete('products');
   }

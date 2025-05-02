@@ -1,41 +1,82 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../models/product_model.dart';
+import '../../models/cart_model.dart';
+import '../../models/wishlist_model.dart';
+import '../../providers/cart_provider.dart';
+import '../../providers/product_provider.dart';
+import '../../providers/wishlist_provider.dart';
+import '../cart/cart_screen.dart';
 
 class ProductDetailsScreen extends StatelessWidget {
   final ProductModel product;
+
   const ProductDetailsScreen({Key? key, required this.product}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    final wishlistProvider = Provider.of<WishlistProvider>(context, listen: false);
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(product.title),
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Product Image with Hero animation
-            Hero(
-              tag: 'product-image-${product.id}',
-              child: Container(
-                height: 300,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage(product.image),
-                    fit: BoxFit.cover,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 300,
+            pinned: true,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Hero(
+                tag: 'product-image-${product.id}',
+                child: Image.network(
+                  product.image,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Center(
+                    child: Icon(Icons.image, size: 60, color: Colors.grey),
                   ),
                 ),
               ),
             ),
-
-            // Product Details
-            Padding(
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.share),
+                onPressed: () {
+                  // Share functionality
+                },
+              ),
+              Consumer<ProductProvider>(
+                builder: (context, provider, child) {
+                  return IconButton(
+                    icon: Icon(
+                      product.isFavorite ? Icons.favorite : Icons.favorite_border,
+                      color: product.isFavorite ? Colors.red : Colors.white,
+                    ),
+                    onPressed: () async {
+                      await productProvider.toggleFavorite(product.id!);
+                      if (product.isFavorite) {
+                        await wishlistProvider.toggleWishlist(
+                          WishlistModel(
+                            productId: product.id!,
+                            title: product.title,
+                            price: product.price,
+                            image: product.image,
+                          ),
+                        );
+                      } else {
+                        await wishlistProvider.removeFromWishlist(product.id!);
+                      }
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title and Price
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -56,10 +97,7 @@ class ProductDetailsScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 8),
-
-                  // Stock Information
                   Row(
                     children: [
                       Icon(
@@ -76,10 +114,7 @@ class ProductDetailsScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 16),
-
-                  // Description
                   Text(
                     'Description',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -91,10 +126,7 @@ class ProductDetailsScreen extends StatelessWidget {
                     product.description,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
-
                   const SizedBox(height: 24),
-
-                  // Add to Cart Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -106,68 +138,46 @@ class ProductDetailsScreen extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: () {
-                        // Show confirmation message
+                      onPressed: () async {
+                        await cartProvider.addToCart(
+                          CartModel(
+                            productId: product.id!,
+                            title: product.title,
+                            price: product.price,
+                            image: product.image,
+                            quantity: 1,
+                          ),
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('${product.title} added to cart'),
-                            duration: const Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                             action: SnackBarAction(
-                              label: 'OK',
-                              onPressed: () {},
+                              label: 'VIEW CART',
+                              textColor: Colors.white,
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const CartScreen()),
+                                );
+                              },
                             ),
                           ),
                         );
                       },
                     ),
                   ),
-
-                  const SizedBox(height: 12),
-
-                  // Additional Action Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.favorite_border),
-                          label: const Text('Wishlist'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          onPressed: () {
-                            // Add to wishlist functionality
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.share),
-                          label: const Text('Share'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          onPressed: () {
-                            // Share functionality
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

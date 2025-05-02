@@ -1,10 +1,11 @@
 class ProductModel {
-  int? id;
-  String title;
-  String description;
-  double price;
-  String image;
-  int stock;
+  final int? id;
+  final String title;
+  final String description;
+  final double price;
+  final String image;
+  final int stock;
+  bool isFavorite;
 
   ProductModel({
     this.id,
@@ -13,6 +14,7 @@ class ProductModel {
     required this.price,
     required this.image,
     required this.stock,
+    this.isFavorite = false,
   });
 
   factory ProductModel.fromMap(Map<String, dynamic> map) {
@@ -23,6 +25,7 @@ class ProductModel {
       price: map['price']?.toDouble() ?? 0.0,
       image: map['image'] ?? '',
       stock: map['stock'] ?? 0,
+      isFavorite: map['isFavorite'] == 1,
     );
   }
 
@@ -34,24 +37,7 @@ class ProductModel {
       'price': price,
       'image': image,
       'stock': stock,
+      'isFavorite': isFavorite ? 1 : 0,
     };
-  }
-
-  ProductModel copyWith({
-    int? id,
-    String? title,
-    String? description,
-    double? price,
-    String? image,
-    int? stock,
-  }) {
-    return ProductModel(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      description: description ?? this.description,
-      price: price ?? this.price,
-      image: image ?? this.image,
-      stock: stock ?? this.stock,
-    );
   }
 }
