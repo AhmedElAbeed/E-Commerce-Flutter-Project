@@ -7,7 +7,13 @@ import '../models/product_model.dart';
 class DBService {
   static Database? _db;
   static const String _dbName = 'ecommerce.db';
-  static const int _dbVersion = 2; // Incremented version number
+  static const int _dbVersion = 2;
+
+  final Database database;
+
+  DBService(this.database) {
+    _db = database;
+  }
 
   Future<Database> get db async {
     if (_db != null) return _db!;
@@ -76,7 +82,6 @@ class DBService {
     );
   }
 
-  // For testing purposes - clear the database
   Future<void> clearDatabase() async {
     final dbClient = await db;
     await dbClient.delete('products');

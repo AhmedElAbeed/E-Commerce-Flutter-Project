@@ -3,9 +3,11 @@ import '../models/product_model.dart';
 import '../services/db_service.dart';
 
 class ProductProvider with ChangeNotifier {
-  final DBService _dbService = DBService();
+  final DBService _dbService;
   List<ProductModel> _products = [];
   bool _isLoading = false;
+
+  ProductProvider(this._dbService);
 
   List<ProductModel> get products => _products;
   bool get isLoading => _isLoading;
