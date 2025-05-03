@@ -1,33 +1,38 @@
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+
+import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/wishlist_provider.dart';
 import 'services/db_service.dart';
 import 'services/cart_service.dart';
 import 'services/wishlist_service.dart';
+import 'views/auth/login_page.dart';
 import 'views/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
+    // Initialize Firebase first
+    await Firebase.initializeApp();
+
     // Initialize database
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
     String path = join(documentsDirectory.path, 'ecommerce.db');
 
-    // Delete existing database for testing (remove in production)
-    // await deleteDatabase(path);
-
     // Open database with proper migration handling
     Database database = await openDatabase(
       path,
-      version: 5, // Incremented version
+      version: 5,
       onCreate: (db, version) async {
         await _createAllTables(db);
       },
@@ -48,6 +53,7 @@ void main() async {
     runApp(
       MultiProvider(
         providers: [
+          ChangeNotifierProvider(create: (_) => UserAuthProvider()),
           ChangeNotifierProvider(create: (_) => ProductProvider(dbService)),
           ChangeNotifierProvider(create: (_) => CartProvider(cartService)),
           ChangeNotifierProvider(create: (_) => WishlistProvider(wishlistService)),
@@ -68,6 +74,7 @@ void main() async {
     );
   }
 }
+
 
 Future<void> _verifyCartTableSchema(Database db) async {
   try {
@@ -187,19 +194,36 @@ Future<void> _createTableIfNotExists(Database db, String table, String createSql
     rethrow;
   }
 }
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Initialize the auth provider
+    final authProvider = Provider.of<UserAuthProvider>(context, listen: false);
+    authProvider.syncUserWithFirebase();
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const HomeScreen(),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.active) {
+            final user = snapshot.data;
+            if (user != null) {
+              return HomeScreen();
+            }
+            return LoginPage();
+          }
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        },
+      ),
     );
   }
 }

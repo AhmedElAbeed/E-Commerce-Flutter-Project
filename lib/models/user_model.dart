@@ -1,17 +1,32 @@
+import 'package:firebase_auth/firebase_auth.dart';
+
 class UserModel {
-  String? uid;
-  String? email;
-  String? name;
-  String? role; // <-- NEW field
+  final String uid;
+  final String? email;
+  final String? name;
+  final String? photoUrl;
+  final String role;
+  final DateTime? createdAt;
+  final DateTime? lastLogin;
 
-  UserModel({this.uid, this.email, this.name, this.role});
+  UserModel({
+    required this.uid,
+    this.email,
+    this.name,
+    this.photoUrl,
+    this.role = 'user',
+    this.createdAt,
+    this.lastLogin,
+  });
 
-  factory UserModel.fromMap(Map<String, dynamic> map) {
+  factory UserModel.fromFirebaseUser(User user) {
     return UserModel(
-      uid: map['uid'],
-      email: map['email'],
-      name: map['name'],
-      role: map['role'],
+      uid: user.uid,
+      email: user.email,
+      name: user.displayName,
+      photoUrl: user.photoURL,
+      createdAt: user.metadata.creationTime,
+      lastLogin: user.metadata.lastSignInTime,
     );
   }
 
@@ -20,7 +35,10 @@ class UserModel {
       'uid': uid,
       'email': email,
       'name': name,
-      'role': role ?? 'user', // default role
+      'photoUrl': photoUrl,
+      'role': role,
+      'createdAt': createdAt?.toIso8601String(),
+      'lastLogin': lastLogin?.toIso8601String(),
     };
   }
 }

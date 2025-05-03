@@ -6,6 +6,7 @@ import '../models/wishlist_model.dart';
 import '../providers/product_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/wishlist_provider.dart';
+import 'auth/profile_screen.dart';
 import 'products/product_details_screen.dart';
 import 'products/product_list_screen.dart';
 import 'cart/cart_screen.dart';
@@ -160,7 +161,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 context,
                 icon: Icons.person,
                 label: 'Profile',
-                onPressed: () {},
+    onPressed: () {
+    Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
+    },
               ),
             ],
           ),

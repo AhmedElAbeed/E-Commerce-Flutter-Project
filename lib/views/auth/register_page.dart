@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({Key? key}) : super(key: key);
@@ -20,22 +22,20 @@ class _RegisterPageState extends State<RegisterPage> {
   bool passwordObscured = true;
   bool isLoading = false;
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final authProvider = Provider.of<UserAuthProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Créer un compte"),
+        title: const Text("Create Account"),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(35),
@@ -43,23 +43,21 @@ class _RegisterPageState extends State<RegisterPage> {
             key: _formKey,
             child: Column(
               children: [
-                SizedBox(
-                  height: 150,
-                  child: Image.asset("assets/logo.png", fit: BoxFit.contain),
-                ),
-                SizedBox(height: 30),
-                Text("Welcome", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-                Text("Create Account to Continue!", style: TextStyle(color: Colors.grey[700], fontSize: 18)),
-                SizedBox(height: 25),
+                const SizedBox(height: 30),
+                const Text("Welcome",
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                Text("Create Account to Continue!",
+                    style: TextStyle(color: Colors.grey[700], fontSize: 18)),
+                const SizedBox(height: 25),
                 buildNameField(),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 buildEmailField(),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 buildPasswordField(),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 buildConfirmPasswordField(),
-                SizedBox(height: 30),
-                buildRegisterButton(size),
+                const SizedBox(height: 30),
+                buildRegisterButton(size, authProvider),
               ],
             ),
           ),
@@ -124,30 +122,24 @@ class _RegisterPageState extends State<RegisterPage> {
     ),
   );
 
-  Widget buildRegisterButton(Size size) {
+  Widget buildRegisterButton(Size size, UserAuthProvider authProvider) {
     return GestureDetector(
       onTap: () async {
         if (_formKey.currentState!.validate()) {
           setState(() => isLoading = true);
           try {
-            UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-              email: _email.text.trim(),
-              password: _password.text.trim(),
+            await authProvider.register(
+              _email.text.trim(),
+              _password.text.trim(),
+              _name.text.trim(),
             );
 
-            await _firestore.collection('users').doc(userCredential.user!.uid).set({
-              'uid': userCredential.user!.uid,
-              'name': _name.text.trim(),
-              'email': _email.text.trim(),
-              'createdAt': FieldValue.serverTimestamp(),
-            });
-
             Fluttertoast.showToast(msg: "Account created successfully!");
-            Navigator.pop(context);
+            if (mounted) Navigator.pop(context);
           } catch (e) {
             Fluttertoast.showToast(msg: "Error: ${e.toString()}");
           } finally {
-            setState(() => isLoading = false);
+            if (mounted) setState(() => isLoading = false);
           }
         }
       },
@@ -159,7 +151,7 @@ class _RegisterPageState extends State<RegisterPage> {
           borderRadius: BorderRadius.circular(30),
         ),
         alignment: Alignment.center,
-        child: Text(
+        child: const Text(
           "Sign Up",
           style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
         ),
