@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/product_provider.dart';
 import '../../views/products/product_form_screen.dart';
+import '../coupon/coupon_list_screen.dart';
 
 class ProductListScreen extends StatelessWidget {
   const ProductListScreen({Key? key}) : super(key: key);
@@ -126,6 +127,16 @@ class ProductListScreen extends StatelessWidget {
             },
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CouponListScreen()),
+          );
+        },
+        backgroundColor: Colors.deepPurple,
+        child: const Icon(Icons.discount, color: Colors.white),
       ),
     );
   }

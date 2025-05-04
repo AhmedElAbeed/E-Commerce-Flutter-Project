@@ -12,9 +12,11 @@ import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/wishlist_provider.dart';
+import 'providers/coupon_provider.dart';
 import 'services/db_service.dart';
 import 'services/cart_service.dart';
 import 'services/wishlist_service.dart';
+import 'services/coupon_service.dart';
 import 'views/auth/login_page.dart';
 import 'views/home_screen.dart';
 
@@ -32,9 +34,9 @@ void main() async {
     // Open database with proper migration handling
     Database database = await openDatabase(
       path,
-      version: 5,
+      version: 6, // Incremented version for coupon support
       onCreate: (db, version) async {
-        await _createAllTables(db);
+        await _createDatabaseTables(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         await _handleDatabaseUpgrade(db, oldVersion, newVersion);
@@ -45,10 +47,10 @@ void main() async {
     final dbService = DBService();
     final cartService = CartService(database);
     final wishlistService = WishlistService(database);
+    final couponService = CouponService(database);
 
-    // Ensure tables exist with proper schema
-    await _verifyCartTableSchema(database);
-    await wishlistService.createWishlistTable();
+    // Ensure all tables exist with proper schema
+    await _verifyAndCreateTables(database);
 
     runApp(
       MultiProvider(
@@ -57,6 +59,7 @@ void main() async {
           ChangeNotifierProvider(create: (_) => ProductProvider(dbService)),
           ChangeNotifierProvider(create: (_) => CartProvider(cartService)),
           ChangeNotifierProvider(create: (_) => WishlistProvider(wishlistService)),
+          ChangeNotifierProvider(create: (_) => CouponProvider(couponService)),
         ],
         child: const MyApp(),
       ),
@@ -75,15 +78,25 @@ void main() async {
   }
 }
 
-
-Future<void> _verifyCartTableSchema(Database db) async {
+Future<void> _verifyAndCreateTables(Database db) async {
   try {
-    // Check if cart table exists
+    // Verify and create all tables if they don't exist
+    await _verifyCartTable(db);
+    await _verifyProductsTable(db);
+    await _verifyWishlistTable(db);
+    await _verifyCouponsTable(db);
+  } catch (e) {
+    debugPrint('Error verifying tables: $e');
+    rethrow;
+  }
+}
+
+Future<void> _verifyCartTable(Database db) async {
+  try {
     final tables = await db.rawQuery(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='cart'");
 
     if (tables.isEmpty) {
-      // Create new cart table with all columns
       await db.execute('''
         CREATE TABLE cart (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,7 +108,6 @@ Future<void> _verifyCartTableSchema(Database db) async {
         )
       ''');
     } else {
-      // Verify all columns exist
       final columns = await db.rawQuery('PRAGMA table_info(cart)');
       final columnNames = columns.map((c) => c['name'].toString()).toList();
 
@@ -104,68 +116,135 @@ Future<void> _verifyCartTableSchema(Database db) async {
       }
     }
   } catch (e) {
-    debugPrint('Error verifying cart table schema: $e');
+    debugPrint('Error verifying cart table: $e');
     rethrow;
   }
 }
 
-Future<void> _createAllTables(Database db) async {
-  await db.execute('''
-    CREATE TABLE IF NOT EXISTS products (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT,
-      description TEXT,
-      price REAL,
-      image TEXT,
-      stock INTEGER DEFAULT 0,
-      isFavorite INTEGER DEFAULT 0
-    )
-  ''');
+Future<void> _verifyProductsTable(Database db) async {
+  try {
+    final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='products'");
 
-  await db.execute('''
-    CREATE TABLE IF NOT EXISTS cart (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      productId INTEGER UNIQUE,
-      title TEXT,
-      price REAL,
-      image TEXT,
-      quantity INTEGER
-    )
-  ''');
+    if (tables.isEmpty) {
+      await db.execute('''
+        CREATE TABLE products (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT,
+          description TEXT,
+          price REAL,
+          image TEXT,
+          stock INTEGER DEFAULT 0,
+          isFavorite INTEGER DEFAULT 0
+        )
+      ''');
+    } else {
+      final columns = await db.rawQuery('PRAGMA table_info(products)');
+      final columnNames = columns.map((c) => c['name'].toString()).toList();
 
-  await db.execute('''
-    CREATE TABLE IF NOT EXISTS wishlist (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      productId INTEGER UNIQUE,
-      title TEXT,
-      price REAL,
-      image TEXT
-    )
-  ''');
+      if (!columnNames.contains('stock')) {
+        await db.execute('ALTER TABLE products ADD COLUMN stock INTEGER DEFAULT 0');
+      }
+      if (!columnNames.contains('isFavorite')) {
+        await db.execute('ALTER TABLE products ADD COLUMN isFavorite INTEGER DEFAULT 0');
+      }
+    }
+  } catch (e) {
+    debugPrint('Error verifying products table: $e');
+    rethrow;
+  }
+}
+
+Future<void> _verifyWishlistTable(Database db) async {
+  try {
+    final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='wishlist'");
+
+    if (tables.isEmpty) {
+      await db.execute('''
+        CREATE TABLE wishlist (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          productId INTEGER UNIQUE,
+          title TEXT,
+          price REAL,
+          image TEXT
+        )
+      ''');
+    }
+  } catch (e) {
+    debugPrint('Error verifying wishlist table: $e');
+    rethrow;
+  }
+}
+
+Future<void> _verifyCouponsTable(Database db) async {
+  try {
+    final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='coupons'");
+
+    if (tables.isEmpty) {
+      await db.execute('''
+        CREATE TABLE coupons (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          code TEXT UNIQUE,
+          discountPercentage REAL,
+          expiryDate TEXT,
+          isActive INTEGER DEFAULT 1
+        )
+      ''');
+    } else {
+      final columns = await db.rawQuery('PRAGMA table_info(coupons)');
+      final columnNames = columns.map((c) => c['name'].toString()).toList();
+
+      if (!columnNames.contains('expiryDate')) {
+        await db.execute('ALTER TABLE coupons ADD COLUMN expiryDate TEXT');
+      }
+      if (!columnNames.contains('isActive')) {
+        await db.execute('ALTER TABLE coupons ADD COLUMN isActive INTEGER DEFAULT 1');
+      }
+    }
+  } catch (e) {
+    debugPrint('Error verifying coupons table: $e');
+    rethrow;
+  }
+}
+
+Future<void> _createDatabaseTables(Database db) async {
+  await _verifyCartTable(db);
+  await _verifyProductsTable(db);
+  await _verifyWishlistTable(db);
+  await _verifyCouponsTable(db);
 }
 
 Future<void> _handleDatabaseUpgrade(Database db, int oldVersion, int newVersion) async {
-  if (oldVersion < 2) {
-    await _addColumnIfNotExists(db, 'products', 'stock', 'INTEGER DEFAULT 0');
-  }
-  if (oldVersion < 3) {
-    await _addColumnIfNotExists(db, 'products', 'isFavorite', 'INTEGER DEFAULT 0');
-    await _createTableIfNotExists(db, 'wishlist', '''
-      CREATE TABLE wishlist (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        productId INTEGER UNIQUE,
-        title TEXT,
-        price REAL,
-        image TEXT
-      )
-    ''');
-  }
-  if (oldVersion < 4) {
-    await _verifyCartTableSchema(db);
-  }
-  if (oldVersion < 5) {
-    // Any additional migrations for version 5
-    await _verifyCartTableSchema(db);
+  try {
+    if (oldVersion < 2) {
+      await _addColumnIfNotExists(db, 'products', 'stock', 'INTEGER DEFAULT 0');
+    }
+    if (oldVersion < 3) {
+      await _addColumnIfNotExists(db, 'products', 'isFavorite', 'INTEGER DEFAULT 0');
+      await _createTableIfNotExists(db, 'wishlist', '''
+        CREATE TABLE wishlist (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          productId INTEGER UNIQUE,
+          title TEXT,
+          price REAL,
+          image TEXT
+        )
+      ''');
+    }
+    if (oldVersion < 4) {
+      await _verifyCartTable(db);
+    }
+    if (oldVersion < 5) {
+      await _verifyCartTable(db);
+    }
+    if (oldVersion < 6) {
+      await _verifyCouponsTable(db);
+    }
+  } catch (e) {
+    debugPrint('Error during database upgrade: $e');
+    rethrow;
   }
 }
 
@@ -194,6 +273,7 @@ Future<void> _createTableIfNotExists(Database db, String table, String createSql
     rethrow;
   }
 }
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/cart_model.dart';
 import '../services/cart_service.dart';
+import '../providers/coupon_provider.dart';
 
 class CartProvider with ChangeNotifier {
   final CartService cartService;
@@ -15,6 +17,15 @@ class CartProvider with ChangeNotifier {
   String? get error => _error;
   int get totalItems => _cartItems.fold(0, (sum, item) => sum + item.quantity);
   double get totalAmount => _cartItems.fold(0.0, (sum, item) => sum + (item.price * item.quantity));
+
+  double getDiscountedTotal(BuildContext context) {
+    final couponProvider = Provider.of<CouponProvider>(context, listen: false);
+    return couponProvider.applyDiscount(totalAmount);
+  }
+
+  bool hasDiscount(BuildContext context) {
+    return Provider.of<CouponProvider>(context, listen: false).appliedCoupon != null;
+  }
 
   Future<void> loadCartItems() async {
     _isLoading = true;

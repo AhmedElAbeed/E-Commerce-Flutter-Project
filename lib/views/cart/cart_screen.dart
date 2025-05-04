@@ -1,12 +1,27 @@
+import 'package:ecommerce/views/coupon/coupon_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/product_model.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/coupon_provider.dart';
 import '../../providers/product_provider.dart';
 import '../products/product_details_screen.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({Key? key}) : super(key: key);
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  final TextEditingController _couponController = TextEditingController();
+
+  @override
+  void dispose() {
+    _couponController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +50,8 @@ class CartScreen extends StatelessWidget {
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text('Clear Cart'),
-                      content: const Text('Are you sure you want to clear your cart?'),
+                      content: const Text(
+                          'Are you sure you want to clear your cart?'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
@@ -69,7 +85,8 @@ class CartScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.shopping_cart_outlined, size: 64, color: Colors.grey),
+                  const Icon(Icons.shopping_cart_outlined,
+                      size: 64, color: Colors.grey),
                   const SizedBox(height: 16),
                   const Text('Your cart is empty'),
                   const SizedBox(height: 16),
@@ -122,7 +139,8 @@ class CartScreen extends StatelessWidget {
                               width: 60,
                               height: 60,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(Icons.image),
+                              errorBuilder: (_, __, ___) =>
+                              const Icon(Icons.image),
                             ),
                           ),
                           title: Text(item.title),
@@ -160,7 +178,9 @@ class CartScreen extends StatelessWidget {
                             ),
                           ),
                           onTap: () {
-                            final productProvider = Provider.of<ProductProvider>(context, listen: false);
+                            final productProvider =
+                            Provider.of<ProductProvider>(context,
+                                listen: false);
                             final product = productProvider.products.firstWhere(
                                   (p) => p.id == item.productId,
                               orElse: () => ProductModel(
@@ -175,7 +195,8 @@ class CartScreen extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => ProductDetailsScreen(product: product),
+                                builder: (_) =>
+                                    ProductDetailsScreen(product: product),
                               ),
                             );
                           },
@@ -184,6 +205,47 @@ class CartScreen extends StatelessWidget {
                     );
                   },
                 ),
+              ),
+              Consumer<CouponProvider>(
+                builder: (context, couponProvider, child) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
+                        if (couponProvider.appliedCoupon != null)
+                          ListTile(
+                            title: Text(
+                                'Applied Coupon: ${couponProvider.appliedCoupon!.code}'),
+                            subtitle: Text(
+                                '${couponProvider.appliedCoupon!.discountPercentage}% off'),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => couponProvider.removeCoupon(),
+                            ),
+                          ),
+                        TextField(
+                          decoration: InputDecoration(
+                            labelText: 'Coupon Code',
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.check),
+                              onPressed: () {
+                                final code = _couponController.text.trim();
+                                if (code.isNotEmpty) {
+                                  couponProvider.applyCoupon(code).catchError((e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(e.toString())),
+                                    );
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          controller: _couponController,
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
               Container(
                 padding: const EdgeInsets.all(16),
@@ -200,12 +262,30 @@ class CartScreen extends StatelessWidget {
                           'Total (${provider.totalItems} items):',
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
-                        Text(
-                          '\$${provider.totalAmount.toStringAsFixed(2)}',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.deepPurple,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (Provider.of<CouponProvider>(context)
+                                .appliedCoupon !=
+                                null)
+                              Text(
+                                '\$${provider.totalAmount.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  decoration: TextDecoration.lineThrough,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            Text(
+                              '\$${provider.getDiscountedTotal(context).toStringAsFixed(2)}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.deepPurple,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -244,6 +324,8 @@ class CartScreen extends StatelessWidget {
           );
         },
       ),
+
+
     );
   }
 }
