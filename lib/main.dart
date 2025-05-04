@@ -33,7 +33,7 @@ void main() async {
 
     Database database = await openDatabase(
       path,
-      version: 7, // Updated version for demands support
+      version: 7,
       onCreate: (db, version) async {
         await _createDatabaseTables(db);
       },
@@ -42,12 +42,18 @@ void main() async {
       },
     );
 
+    // Initialize services
     final dbService = DBService();
     final cartService = CartService(database);
     final wishlistService = WishlistService(database);
     final couponService = CouponService(database);
+    final demandService = DemandService(database);
 
+    // Initialize database tables
     await _verifyAndCreateTables(database);
+
+    // Clear demands table if needed (only for debugging)
+    // await demandService.clearAllDemands();
 
     runApp(
       MultiProvider(
@@ -57,7 +63,7 @@ void main() async {
           ChangeNotifierProvider(create: (_) => CartProvider(cartService)),
           ChangeNotifierProvider(create: (_) => WishlistProvider(wishlistService)),
           ChangeNotifierProvider(create: (_) => CouponProvider(couponService)),
-          ChangeNotifierProvider(create: (_) => DemandProvider(DemandService(database))),
+          ChangeNotifierProvider(create: (_) => DemandProvider(demandService)),
         ],
         child: const MyApp(),
       ),
@@ -73,6 +79,14 @@ void main() async {
         ),
       ),
     );
+  }
+}
+Future<void> _clearDemandsTable(Database db) async {
+  try {
+    await db.delete('demands');
+    debugPrint('Demands table cleared.');
+  } catch (e) {
+    debugPrint('Error clearing demands table: $e');
   }
 }
 

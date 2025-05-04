@@ -4,13 +4,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../auth/login_page.dart';
+import '../demands/demand_history_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<UserAuthProvider>(context); // Updated class name
+    final authProvider = Provider.of<UserAuthProvider>(context);
     final user = authProvider.user;
 
     return Scaffold(
@@ -68,6 +69,23 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
+            if (user?.email != null) ...[
+              const SizedBox(height: 20),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.history),
+                  title: const Text('My Orders'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DemandHistoryScreen(userEmail: user!.email!),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
             const Spacer(),
             SizedBox(
               width: double.infinity,
