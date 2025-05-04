@@ -1,10 +1,14 @@
 import 'package:ecommerce/views/coupon/coupon_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/demand_model.dart';
 import '../../models/product_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/coupon_provider.dart';
+import '../../providers/demand_provider.dart';
 import '../../providers/product_provider.dart';
+import '../demands/demand_confirmation_screen.dart';
 import '../products/product_details_screen.dart';
 
 class CartScreen extends StatefulWidget {
@@ -290,6 +294,7 @@ class _CartScreenState extends State<CartScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
+// Update your CartScreen's proceed to checkout button
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -300,16 +305,53 @@ class _CartScreenState extends State<CartScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Proceeding to checkout'),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                        onPressed: () async {
+                          final user = Provider.of<UserAuthProvider>(context, listen: false).user;
+                          final cartProvider = Provider.of<CartProvider>(context, listen: false);
+                          final couponProvider = Provider.of<CouponProvider>(context, listen: false);
+                          final demandProvider = Provider.of<DemandProvider>(context, listen: false);
+
+                          if (user == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please login to proceed')),
+                            );
+                            return;
+                          }
+
+                          try {
+                            final demand = DemandModel(
+                              userEmail: user.email!,
+                              products: cartProvider.cartItems.map((item) => CartItem(
+                                productId: item.productId,
+                                title: item.title,
+                                price: item.price,
+                                image: item.image,
+                                quantity: item.quantity,
+                              )).toList(),
+                              totalAmount: couponProvider.appliedCoupon != null
+                                  ? cartProvider.getDiscountedTotal(context)
+                                  : cartProvider.totalAmount,
+                              date: DateTime.now(),
+                              couponCode: couponProvider.appliedCoupon?.code,
+                            );
+
+                            final demandId = await demandProvider.createDemand(demand);
+
+                            // Clear cart after successful demand creation
+                            await cartProvider.clearCart();
+                            couponProvider.removeCoupon();
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DemandConfirmationScreen(demandId: demandId),
                               ),
-                            ),
-                          );
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: ${e.toString()}')),
+                            );
+                          }
                         },
                         child: const Text(
                           'Proceed to Checkout',
