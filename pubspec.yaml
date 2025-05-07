@@ -28,6 +28,7 @@ dependencies:
   # Image and Permissions
   image_picker: ^1.1.1
   permission_handler: ^11.3.1
+  flutter_animate: ^4.1.1  # Use the latest version from pub.dev
 
   # State Management
   provider: ^6.1.2
