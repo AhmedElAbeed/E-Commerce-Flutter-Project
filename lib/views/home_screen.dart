@@ -30,6 +30,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final userEmail = "ahmedelrollins398@gmail.com"; // Replace with your actual user email logic
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Trending Products"),
@@ -38,78 +40,111 @@ class _HomeScreenState extends State<HomeScreen> {
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.deepPurple.shade800, Colors.purple.shade400],
+              colors: [Colors.indigo.shade800, Colors.blueAccent.shade400],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProductListScreen()),
-              );
-            },
-          ),
+          if (userEmail == "ahmedelrollins398@gmail.com")
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProductListScreen()),
+                );
+              },
+            ),
         ],
       ),
-      body: Consumer<ProductProvider>(
-        builder: (context, provider, child) {
-          if (provider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
-              ),
-            );
-          }
-
-          if (provider.products.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.inventory_2, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "No products available",
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => provider.loadProducts(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.indigo.shade50,
+              Colors.blue.shade50,
+            ],
+          ),
+        ),
+        child: Consumer<ProductProvider>(
+          builder: (context, provider, child) {
+            if (provider.isLoading) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.indigo.shade800),
+                      strokeWidth: 3,
                     ),
-                    child: const Text('Refresh'),
-                  ),
-                ],
-              ),
-            );
-          }
+                    const SizedBox(height: 16),
+                    Text(
+                      "Loading Products...",
+                      style: TextStyle(
+                        color: Colors.indigo.shade800,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
 
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.75,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
-            itemCount: provider.products.length,
-            itemBuilder: (context, index) {
-              final product = provider.products[index];
-              return ProductCard(product: product);
-            },
-          );
-        },
+            if (provider.products.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.inventory_2, size: 64, color: Colors.indigo.shade300),
+                    const SizedBox(height: 16),
+                    Text(
+                      "No products available",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.indigo.shade800,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => provider.loadProducts(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.indigo.shade800,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        elevation: 3,
+                      ),
+                      child: const Text('Refresh'),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.8, // Slightly taller cards
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              itemCount: provider.products.length,
+              itemBuilder: (context, index) {
+                final product = provider.products[index];
+                return ProductCard(product: product);
+              },
+            );
+          },
+        ),
       ),
       bottomNavigationBar: _buildBottomNavBar(context),
     );
@@ -131,7 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         child: BottomAppBar(
-          height: 70,
+          height: 75, // Slightly taller
           color: Colors.white,
           padding: EdgeInsets.zero,
           child: Row(
@@ -207,15 +242,23 @@ class _HomeScreenState extends State<HomeScreen> {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(
-                  icon,
-                  size: 24,
-                  color: isActive ? Colors.deepPurple : Colors.grey.shade600,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isActive ? Colors.indigo.shade50 : Colors.transparent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 24,
+                    color: isActive ? Colors.indigo.shade800 : Colors.grey.shade600,
+                  ),
                 ),
                 if (badgeCount > 0)
                   Positioned(
-                    right: -8,
-                    top: -8,
+                    right: 0,
+                    top: 0,
                     child: Container(
                       padding: const EdgeInsets.all(2),
                       decoration: BoxDecoration(
@@ -246,7 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: isActive ? Colors.deepPurple : Colors.grey.shade600,
+                color: isActive ? Colors.indigo.shade800 : Colors.grey.shade600,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
@@ -274,9 +317,9 @@ class ProductCard extends StatelessWidget {
         );
       },
       child: Card(
-        elevation: 2,
+        elevation: 3,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(
@@ -300,7 +343,7 @@ class ProductCard extends StatelessWidget {
                                   ? loadingProgress.cumulativeBytesLoaded /
                                   loadingProgress.expectedTotalBytes!
                                   : null,
-                              color: Colors.deepPurple,
+                              color: Colors.indigo.shade800,
                             ),
                           );
                         },
@@ -316,7 +359,7 @@ class ProductCard extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -325,17 +368,18 @@ class ProductCard extends StatelessWidget {
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
+                          height: 1.2,
                         ),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         '\$${product.price.toStringAsFixed(2)}',
                         style: TextStyle(
-                          color: Colors.deepPurple,
+                          color: Colors.indigo.shade800,
                           fontWeight: FontWeight.bold,
-                          fontSize: 15,
+                          fontSize: 16,
                         ),
                       ),
                     ],
@@ -352,6 +396,14 @@ class ProductCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.9),
                       shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.2),
+                          spreadRadius: 1,
+                          blurRadius: 3,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
                     ),
                     child: IconButton(
                       icon: Icon(
@@ -393,8 +445,8 @@ class ProductCard extends StatelessWidget {
                 builder: (context, cartProvider, child) {
                   return FloatingActionButton.small(
                     heroTag: 'add-to-cart-${product.id}',
-                    backgroundColor: Colors.deepPurple,
-                    elevation: 1,
+                    backgroundColor: Colors.indigo.shade800,
+                    elevation: 2,
                     onPressed: () async {
                       await cartProvider.addToCart(
                         CartModel(
@@ -413,11 +465,12 @@ class ProductCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           margin: const EdgeInsets.all(10),
+                          backgroundColor: Colors.indigo.shade800,
                         ),
                       );
                     },
                     child: const Icon(Icons.add_shopping_cart_rounded,
-                        size: 18),
+                        size: 18, color: Colors.white),
                   );
                 },
               ),

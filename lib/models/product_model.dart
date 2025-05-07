@@ -40,4 +40,24 @@ class ProductModel {
       'isFavorite': isFavorite ? 1 : 0,
     };
   }
+
+  ProductModel copyWith({
+    int? id,
+    String? title,
+    String? description,
+    double? price,
+    String? image,
+    int? stock,
+    bool? isFavorite,
+  }) {
+    return ProductModel(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      price: price ?? this.price,
+      image: image ?? this.image,
+      stock: stock ?? this.stock,
+      isFavorite: isFavorite ?? this.isFavorite,
+    );
+  }
 }

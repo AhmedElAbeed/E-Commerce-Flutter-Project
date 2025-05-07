@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import '../models/demand_model.dart';
+import '../models/product_model.dart';
+import 'db_service.dart';
 
 class DemandService {
   static const String _tableName = 'demands';
   final Database db;
+  final DBService dbService;
 
-  DemandService(this.db);
+  DemandService(this.db, this.dbService);
 
   Future<void> createDemandsTable() async {
     await db.execute(''' 
@@ -87,6 +90,32 @@ class DemandService {
         whereArgs: [id],
       );
       print('🔄 Demand status updated for ID $id -> $status');
+
+      if (status == 'approved') {
+        // Fetch the demand to get product info
+        final List<Map<String, dynamic>> result = await db.query(
+          _tableName,
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+
+        if (result.isNotEmpty) {
+          final demand = DemandModel.fromMap(result.first);
+          for (final product in demand.products) {
+            final existingProduct = await dbService.getProductById(product.productId);
+            if (existingProduct != null) {
+              final updatedStock = (existingProduct.stock ?? 0) - product.quantity;
+              final updatedProduct = existingProduct.copyWith(
+                stock: updatedStock >= 0 ? updatedStock : 0,
+              );
+              await dbService.updateProduct(updatedProduct);
+              print('📉 Reduced stock for product ${product.productId} by ${product.quantity}');
+            } else {
+              print('⚠️ Product ID ${product.productId} not found');
+            }
+          }
+        }
+      }
     } catch (e) {
       print('❌ Error updating demand status: $e');
       rethrow;
@@ -98,7 +127,6 @@ class DemandService {
       final allDemands = await db.query(_tableName);
       for (final demand in allDemands) {
         if (demand['products'] is String && !demand['products'].toString().startsWith('[')) {
-          // This is invalid data, let's fix it
           final fixedProducts = jsonEncode([
             {
               'productId': 1,

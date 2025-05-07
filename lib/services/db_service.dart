@@ -103,6 +103,7 @@ class DBService {
     return res.isNotEmpty ? ProductModel.fromMap(res.first) : null;
   }
 
+
   Future<void> clearProducts() async {
     final dbClient = await db;
     await dbClient.delete('products');

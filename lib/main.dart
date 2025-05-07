@@ -47,7 +47,7 @@ void main() async {
     final cartService = CartService(database);
     final wishlistService = WishlistService(database);
     final couponService = CouponService(database);
-    final demandService = DemandService(database);
+    final demandService = DemandService(database, dbService); // ✅ Pass both
 
     // Initialize database tables
     await _verifyAndCreateTables(database);
