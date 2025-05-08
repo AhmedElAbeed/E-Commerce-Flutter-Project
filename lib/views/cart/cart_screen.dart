@@ -1,10 +1,6 @@
-
-
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../models/demand_model.dart';
 import '../../models/product_model.dart';
 import '../../providers/auth_provider.dart';
@@ -24,6 +20,8 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   final TextEditingController _couponController = TextEditingController();
+  final Color _primaryColor = Colors.indigo.shade800;
+  final Color _secondaryColor = Colors.blueAccent.shade400;
 
   @override
   void dispose() {
@@ -34,17 +32,29 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Your Cart'),
+        title: const Text('Your Cart',
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
+                color: Colors.white)),
         centerTitle: true,
-        elevation: 0,
+        elevation: 4,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.deepPurple, Colors.purple.shade300],
+              colors: [_primaryColor, _secondaryColor],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: _primaryColor.withOpacity(0.3),
+                blurRadius: 10,
+                spreadRadius: 1,
+              ),
+            ],
           ),
         ),
         actions: [
@@ -52,31 +62,9 @@ class _CartScreenState extends State<CartScreen> {
             builder: (context, provider, child) {
               return provider.cartItems.isNotEmpty
                   ? IconButton(
-                icon: const Icon(Icons.delete),
-                onPressed: () async {
-                  await showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Clear Cart'),
-                      content: const Text(
-                          'Are you sure you want to clear your cart?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            Navigator.pop(context);
-                            await provider.clearCart();
-                          },
-                          child: const Text('Clear'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              )
+                icon: const Icon(Icons.delete_outline_rounded, size: 28),
+                onPressed: () => _showClearCartDialog(context, provider),
+              ).animate().shakeX(delay: 300.ms)
                   : const SizedBox();
             },
           ),
@@ -85,7 +73,12 @@ class _CartScreenState extends State<CartScreen> {
       body: Consumer<CartProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(
+                color: _primaryColor,
+                strokeWidth: 3,
+              ).animate().scale(),
+            );
           }
 
           if (provider.cartItems.isEmpty) {
@@ -93,21 +86,40 @@ class _CartScreenState extends State<CartScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.shopping_cart_outlined,
-                      size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  const Text('Your cart is empty'),
-                  const SizedBox(height: 16),
+                  Icon(Icons.shopping_cart_outlined,
+                      size: 80, color: Colors.grey.shade400)
+                      .animate()
+                      .scale(duration: 600.ms)
+                      .then(delay: 200.ms)
+                      .shake(),
+                  const SizedBox(height: 24),
+                  Text('Your Cart is Empty',
+                      style: TextStyle(
+                          fontSize: 22,
+                          color: _primaryColor,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Text('Add some products to get started',
+                      style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey.shade600)),
+                  const SizedBox(height: 36),
                   ElevatedButton(
                     onPressed: () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                      backgroundColor: _primaryColor,
+                      elevation: 5,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                       ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 36, vertical: 16),
+                      shadowColor: _secondaryColor.withOpacity(0.3),
                     ),
-                    child: const Text('Continue Shopping'),
-                  ),
+                    child: const Text('Continue Shopping',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.5),
                 ],
               ),
             );
@@ -127,251 +139,449 @@ class _CartScreenState extends State<CartScreen> {
                       background: Container(
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 20),
-                        color: Colors.red,
-                        child: const Icon(Icons.delete, color: Colors.white),
+                        color: Colors.red.shade400,
+                        child: const Icon(Icons.delete_rounded,
+                            color: Colors.white, size: 28),
                       ),
-                      onDismissed: (direction) async {
-                        await provider.removeFromCart(item.productId);
+                      confirmDismiss: (direction) async {
+                        return await _showDeleteItemDialog(context, provider, item.productId as String);
                       },
                       child: Card(
                         margin: const EdgeInsets.only(bottom: 16),
+                        elevation: 2,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.all(8),
-                          leading: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              item.image,
-                              width: 60,
-                              height: 60,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                              const Icon(Icons.image),
-                            ),
-                          ),
-                          title: Text(item.title),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('\$${item.price.toStringAsFixed(2)}'),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.remove, size: 18),
-                                    onPressed: () => provider.updateQuantity(
-                                      item.productId,
-                                      item.quantity - 1,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () => _navigateToProductDetails(context, item as CartItem),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                // Product Image
+                                Hero(
+                                  tag: 'cart-image-${item.productId}',
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.network(
+                                      item.image,
+                                      width: 80,
+                                      height: 80,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        width: 80,
+                                        height: 80,
+                                        color: Colors.grey.shade200,
+                                        child: Icon(Icons.image_rounded,
+                                            color: Colors.grey.shade400),
+                                      ),
                                     ),
                                   ),
-                                  Text(item.quantity.toString()),
-                                  IconButton(
-                                    icon: const Icon(Icons.add, size: 18),
-                                    onPressed: () => provider.updateQuantity(
-                                      item.productId,
-                                      item.quantity + 1,
-                                    ),
+                                ),
+                                const SizedBox(width: 16),
+                                // Product Details
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.title,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        '\$${item.price.toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                          color: _primaryColor,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      // Quantity Controls
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade100,
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: Icon(Icons.remove_rounded,
+                                                  size: 18,
+                                                  color: item.quantity > 1
+                                                      ? _primaryColor
+                                                      : Colors.grey),
+                                              onPressed: item.quantity > 1
+                                                  ? () => provider.updateQuantity(
+                                                item.productId,
+                                                item.quantity - 1,
+                                              )
+                                                  : null,
+                                            ),
+                                            Text(item.quantity.toString(),
+                                                style: const TextStyle(
+                                                    fontWeight: FontWeight.bold)),
+                                            IconButton(
+                                              icon: const Icon(Icons.add_rounded,
+                                                  size: 18),
+                                              onPressed: () =>
+                                                  provider.updateQuantity(
+                                                    item.productId,
+                                                    item.quantity + 1,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          trailing: Text(
-                            '\$${(item.price * item.quantity).toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                                ),
+                                // Total Price
+                                Text(
+                                  '\$${(item.price * item.quantity).toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          onTap: () {
-                            final productProvider =
-                            Provider.of<ProductProvider>(context,
-                                listen: false);
-                            final product = productProvider.products.firstWhere(
-                                  (p) => p.id == item.productId,
-                              orElse: () => ProductModel(
-                                id: item.productId,
-                                title: item.title,
-                                description: '',
-                                price: item.price,
-                                image: item.image,
-                                stock: 0,
-                              ),
-                            );
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    ProductDetailsScreen(product: product),
-                              ),
-                            );
-                          },
                         ),
-                      ),
+                      ).animate().fadeIn(delay: (100 * index).ms),
                     );
                   },
                 ),
               ),
-              Consumer<CouponProvider>(
-                builder: (context, couponProvider, child) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      children: [
-                        if (couponProvider.appliedCoupon != null)
-                          ListTile(
-                            title: Text(
-                                'Applied Coupon: ${couponProvider.appliedCoupon!.code}'),
-                            subtitle: Text(
-                                '${couponProvider.appliedCoupon!.discountPercentage}% off'),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.close),
-                              onPressed: () => couponProvider.removeCoupon(),
-                            ),
-                          ),
-                        TextField(
-                          decoration: InputDecoration(
-                            labelText: 'Coupon Code',
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.check),
-                              onPressed: () {
-                                final code = _couponController.text.trim();
-                                if (code.isNotEmpty) {
-                                  couponProvider.applyCoupon(code).catchError((e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(e.toString())),
-                                    );
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                          controller: _couponController,
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  border: Border(top: BorderSide(color: Colors.grey.shade300)),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Total (${provider.totalItems} items):',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            if (Provider.of<CouponProvider>(context)
-                                .appliedCoupon !=
-                                null)
-                              Text(
-                                '\$${provider.totalAmount.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  decoration: TextDecoration.lineThrough,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            Text(
-                              '\$${provider.getDiscountedTotal(context).toStringAsFixed(2)}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.deepPurple,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-// Update your CartScreen's proceed to checkout button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: () async {
-                          final user = Provider.of<UserAuthProvider>(context, listen: false).user;
-                          final cartProvider = Provider.of<CartProvider>(context, listen: false);
-                          final couponProvider = Provider.of<CouponProvider>(context, listen: false);
-                          final demandProvider = Provider.of<DemandProvider>(context, listen: false);
-
-                          if (user == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please login to proceed')),
-                            );
-                            return;
-                          }
-
-                          try {
-                            final demand = DemandModel(
-                              userEmail: user.email!,
-                              products: cartProvider.cartItems.map((item) => CartItem(
-                                productId: item.productId,
-                                title: item.title,
-                                price: item.price,
-                                image: item.image,
-                                quantity: item.quantity,
-                              )).toList(),
-                              totalAmount: couponProvider.appliedCoupon != null
-                                  ? cartProvider.getDiscountedTotal(context)
-                                  : cartProvider.totalAmount,
-                              date: DateTime.now(),
-                              couponCode: couponProvider.appliedCoupon?.code,
-                            );
-
-                            final demandId = await demandProvider.createDemand(demand);
-
-                            // Clear cart after successful demand creation
-                            await cartProvider.clearCart();
-                            couponProvider.removeCoupon();
-
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DemandConfirmationScreen(demandId: demandId),
-                              ),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: ${e.toString()}')),
-                            );
-                          }
-                        },
-                        child: const Text(
-                          'Proceed to Checkout',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // Coupon and Checkout Section
+              _buildCheckoutSection(context),
             ],
           );
         },
       ),
+    );
+  }
 
+  Widget _buildCheckoutSection(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 2,
+            offset: const Offset(0, -5),
+          ),
+        ],
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Coupon Section
+          Consumer<CouponProvider>(
+            builder: (context, couponProvider, child) {
+              return Column(
+                children: [
+                  if (couponProvider.appliedCoupon != null)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.discount_rounded,
+                              color: Colors.green.shade600),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Coupon Applied: ${couponProvider.appliedCoupon!.code}',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green.shade800),
+                                ),
+                                Text(
+                                  '${couponProvider.appliedCoupon!.discountPercentage}% discount',
+                                  style: TextStyle(color: Colors.green.shade600),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.close_rounded,
+                                color: Colors.green.shade600),
+                            onPressed: () => couponProvider.removeCoupon(),
+                          ),
+                        ],
+                      ),
+                    ).animate().slideX(begin: 1),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _couponController,
+                    decoration: InputDecoration(
+                      hintText: 'Enter coupon code',
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      suffixIcon: Material(
+                        color: _primaryColor,
+                        borderRadius: BorderRadius.circular(10),
+                        child: IconButton(
+                          icon: const Icon(Icons.discount_rounded,
+                              color: Colors.white),
+                          onPressed: () {
+                            final code = _couponController.text.trim();
+                            if (code.isNotEmpty) {
+                              couponProvider.applyCoupon(code).catchError((e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(e.toString()),
+                                    backgroundColor: Colors.red,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                );
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 20),
+          // Total and Checkout Button
+          Consumer<CartProvider>(
+            builder: (context, cartProvider, child) {
+              final couponProvider = Provider.of<CouponProvider>(context);
+              final hasDiscount = couponProvider.appliedCoupon != null;
+              final discountedTotal = cartProvider.getDiscountedTotal(context);
 
+              return Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Subtotal (${cartProvider.totalItems} items):',
+                          style: TextStyle(color: Colors.grey.shade600)),
+                      Text('\$${cartProvider.totalAmount.toStringAsFixed(2)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  if (hasDiscount) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Discount:',
+                            style: TextStyle(color: Colors.grey.shade600)),
+                        Text(
+                          '-\$${(cartProvider.totalAmount - discountedTotal).toStringAsFixed(2)}',
+                          style: TextStyle(
+                              color: Colors.green.shade600,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Total:',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: _primaryColor)),
+                      Text(
+                        '\$${discountedTotal.toStringAsFixed(2)}',
+                        style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: _primaryColor),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: _primaryColor,
+                        elevation: 5,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        shadowColor: _secondaryColor.withOpacity(0.3),
+                      ),
+                      onPressed: () => _proceedToCheckout(context),
+                      child: const Text(
+                        'Proceed to Checkout',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ).animate().slideY(begin: 1, delay: 200.ms),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _proceedToCheckout(BuildContext context) async {
+    final user = Provider.of<UserAuthProvider>(context, listen: false).user;
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final couponProvider = Provider.of<CouponProvider>(context, listen: false);
+    final demandProvider = Provider.of<DemandProvider>(context, listen: false);
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please login to proceed'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final demand = DemandModel(
+        userEmail: user.email!,
+        products: cartProvider.cartItems.map((item) => CartItem(
+          productId: item.productId,
+          title: item.title,
+          price: item.price,
+          image: item.image,
+          quantity: item.quantity,
+        )).toList(),
+        totalAmount: couponProvider.appliedCoupon != null
+            ? cartProvider.getDiscountedTotal(context)
+            : cartProvider.totalAmount,
+        date: DateTime.now(),
+        couponCode: couponProvider.appliedCoupon?.code,
+      );
+
+      final demandId = await demandProvider.createDemand(demand);
+
+      // Clear cart after successful demand creation
+      await cartProvider.clearCart();
+      couponProvider.removeCoupon();
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DemandConfirmationScreen(demandId: demandId),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<bool?> _showDeleteItemDialog(
+      BuildContext context, CartProvider provider, String productId) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove Item'),
+        content: const Text('Are you sure you want to remove this item from your cart?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context, true);
+              await provider.removeFromCart(productId as int);
+            },
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showClearCartDialog(
+      BuildContext context, CartProvider provider) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Cart'),
+        content: const Text('Are you sure you want to clear your cart?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await provider.clearCart();
+            },
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToProductDetails(BuildContext context, CartItem item) {
+    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    final product = productProvider.products.firstWhere(
+          (p) => p.id == item.productId,
+      orElse: () => ProductModel(
+        id: item.productId,
+        title: item.title,
+        description: '',
+        price: item.price,
+        image: item.image,
+        stock: 0,
+      ),
+    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProductDetailsScreen(product: product),
+      ),
     );
   }
 }
