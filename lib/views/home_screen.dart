@@ -12,6 +12,8 @@ import 'products/product_details_screen.dart';
 import 'products/product_list_screen.dart';
 import 'cart/cart_screen.dart';
 import 'wishlist/wishlist_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -33,8 +35,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final primaryColor = Colors.indigo.shade800;
     final secondaryColor = Colors.blueAccent.shade400;
-    final userEmail = "ahmedelrollins398@gmail.com";
-
+    final user = FirebaseAuth.instance.currentUser;
+    final userEmail = user?.email ?? '';
     return Scaffold(
       appBar: AppBar(
           title: const Text("Trending Products").animate().fadeIn(delay: 200.ms),
@@ -57,16 +59,16 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           actions: [
-      if (userEmail == "ahmedelrollins398@gmail.com")
-      IconButton(
-      icon: const Icon(Icons.settings),
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ProductListScreen()),
-        );
-      },
-    ).animate().shakeX(delay: 300.ms),
+            if (userEmail == "ahmedelrollins398@gmail.com")
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProductListScreen()),
+                  );
+                },
+              ).animate().shakeX(delay: 300.ms),
     ],
     ),
     body: Container(
